@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func init() {
@@ -18,7 +19,7 @@ var login string = `
 
 <head>
     <meta charset="UTF-8">
-    <title>Jumanji</title>
+    <title>Echo Creds</title>
 </head>
 
 <body>
@@ -35,8 +36,8 @@ var login string = `
     </style>
     <form action="/submit" method="POST">
         <div>
-            <label>Email:</label>
-            <input type='email' autocomplete="username" id="username" name="username" />
+            <label>Username:</label>
+            <input type='text' autocomplete="username" id="username" name="username" />
         </div>
         <div>
             <label>Password:</label>
@@ -54,15 +55,33 @@ var home string = `
 
 <head>
     <meta charset="UTF-8">
-    <title>Jumanji</title>
+    <title>Echo Creds</title>
 </head>
 
 <body>
-    <h2> Welcome to Jumanji!</h2>
+    <h2> Welcome to Echo Creds!</h2>
 
     <h4> Username - {{ .username }}</h4>
     <h4> Password - {{ .password }}</h4>
 
+</body>
+
+</html>
+`
+
+var errorPage string = `
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Echo Creds</title>
+</head>
+
+<body>
+	<h2> Failure</h2>
+    <h4> Expected (admin/admin) </h4>
+	<h4> Received ({{ .username }}/{{ .password }})</h4>
 </body>
 
 </html>
@@ -91,6 +110,26 @@ func main() {
 		data := make(map[string]string)
 		data["username"] = r.Form.Get("username")
 		data["password"] = r.Form.Get("password")
+
+		if !strings.EqualFold(r.Form.Get("username"), "admin") ||
+			!strings.EqualFold(r.Form.Get("password"), "admin") {
+			tmpl, err := template.New("error-page").Parse(errorPage)
+			if err != nil {
+				http.Error(w, "failed create welcome template", http.StatusBadRequest)
+				return
+			}
+			var out bytes.Buffer
+			if err := tmpl.Execute(&out, data); err != nil {
+				http.Error(w, "failed to parse error template", http.StatusBadRequest)
+				return
+			}
+			w.WriteHeader(http.StatusBadRequest)
+			if _, err := w.Write([]byte(out.Bytes())); err != nil {
+				http.Error(w, "failed to load error page", http.StatusBadRequest)
+				return
+			}
+			return
+		}
 
 		tmpl, err := template.New("welcome").Parse(home)
 		if err != nil {
