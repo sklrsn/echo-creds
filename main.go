@@ -93,6 +93,11 @@ func main() {
 		http.Redirect(w, r, "/login", http.StatusPermanentRedirect)
 	})
 
+	http.HandleFunc("/sso", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		http.Redirect(w, r, "https://sso.paloaltonetworks.com", http.StatusMovedPermanently)
+	})
+
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte(login)); err != nil {
